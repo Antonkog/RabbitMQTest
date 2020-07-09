@@ -2,6 +2,7 @@ package com.example.rabbitmqtest.ui.main
 
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,9 +11,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import com.example.rabbitmqtest.R
-import java.lang.StringBuilder
 
 
 class MainFragment : Fragment() {
@@ -25,10 +24,8 @@ class MainFragment : Fragment() {
 
     private lateinit var viewModel: MainViewModel
 
-
-
-
     private val massagesObserver = Observer<String> {
+        Log.e(this.javaClass.canonicalName, it)
         textView.text = it
     }
 
@@ -37,6 +34,7 @@ class MainFragment : Fragment() {
         val root =  inflater.inflate(R.layout.main_fragment, container, false)
 
         val btnSubscribe  = root.findViewById<Button>(R.id.button_subscribe)
+
         btnSubscribe.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
 
@@ -53,24 +51,11 @@ class MainFragment : Fragment() {
         return root
     }
 
-//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-//        super.onViewCreated(view, savedInstanceState)
-//        viewModel = ViewModelProviders.of(this).get(MainViewModel::class.java)
-//        viewModel.massages.observe(viewLifecycleOwner, massagesObserver)
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-//            viewModel.subscribeRabbitMQ()
-//        }
-//
-//    }
-
-
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
         viewModel.massages.observe(viewLifecycleOwner, massagesObserver)
     }
-
 
     private fun disconnectRabbitMQ() {
         viewModel.disconnectRabbitMQ()

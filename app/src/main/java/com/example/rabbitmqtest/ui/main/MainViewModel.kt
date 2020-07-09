@@ -1,10 +1,12 @@
 package com.example.rabbitmqtest.ui.main
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.rabbitmqtest.ui.main.rabbitMQ.RabbitmqListener
 import com.example.rabbitmqtest.ui.main.rabbitMQ.SocketConstants
 import com.example.trackandtrace.order.orderDetails.rabbitMq.CommonConsumer
 import com.rabbitmq.client.Channel
@@ -17,12 +19,11 @@ import java.io.IOException
 import java.util.concurrent.TimeoutException
 
 
-class MainViewModel : ViewModel() {
+class MainViewModel : ViewModel(), RabbitmqListener {
 
-    private lateinit var connection: Connection
-    private lateinit var channel: Channel
+   var connection: Connection? = null
+    var channel: Channel? = null
     val massages  =  MutableLiveData<String>()
-
 
     @RequiresApi(Build.VERSION_CODES.KITKAT)
     fun subscribeRabbitMQ() {
@@ -47,24 +48,26 @@ class MainViewModel : ViewModel() {
 
                 connection = factory.newConnection()
 
-                connection.let { channel = it.createChannel() }
-                channel.let {
-                    channel.exchangeDeclare(SocketConstants.exchange, SocketConstants.exchangeType)
+                connection?.let { channel = it.createChannel() }
+                channel?.let {
+                    channel?.let {chan ->
+                        chan.exchangeDeclare(SocketConstants.exchange, SocketConstants.exchangeType)
 
-                    val q = channel.queueDeclare("", true, false, true, null)
+                        val q = chan.queueDeclare("", true, false, true, null)
 
-                    channel.queueBind(
-                        q.getQueue(),
-                        SocketConstants.exchange,
-                        SocketConstants.routingKey,
-                        null
-                    )
+                        chan.queueBind(
+                            q.queue,
+                            SocketConstants.exchange,
+                            SocketConstants.routingKey,
+                            null
+                        )
 
-                    println(" [*] Waiting for messages. To exit press CTRL+C")
+                        println(" [*] Waiting for messages. To exit press CTRL+C")
 
-                    val consumer =   CommonConsumer( channel)
+                        val consumer = CommonConsumer(chan, this@MainViewModel)
 
-                    channel.basicConsume(q.queue, true, consumer)
+                        chan.basicConsume(q.queue, true, consumer)
+                    }
 
 
                 }
@@ -82,8 +85,13 @@ class MainViewModel : ViewModel() {
     }
 
     suspend fun unsubscribe() = withContext(Dispatchers.Default) {
-        if (connection.isOpen) {
-            connection.close()
+        if (connection?.isOpen == true) {
+            Log.d(this.javaClass.canonicalName, "unsubscribe rabbit")
+            connection?.close()
         }
+    }
+
+    override fun gotMessage(msg: String) {
+        massages.postValue(msg)
     }
 }
